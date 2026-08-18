@@ -40,10 +40,10 @@ SYSTEM_INSTRUCTION = """
 7. 실제 기출문제 형태를 충실히 반영해서 출제할 것.
 """
 
-# 1. PDF 캐싱 업로드 함수 (최초 1회만 실행)
+# 1. PDF 캐싱 업로드 함수 (API 키가 바뀌면 자동 재실행됨)
 @st.cache_resource(show_spinner=False)
-def get_uploaded_files():
-    client = genai.Client(api_key=api_key)
+def get_uploaded_files(_api_key: str):
+    client = genai.Client(api_key=_api_key)
     PDF_DIR = "./pdf_data"
     pdf_files = sorted(glob.glob(os.path.join(PDF_DIR, "*.pdf")))
     
@@ -66,6 +66,9 @@ def get_uploaded_files():
             file_ref = client.files.get(name=file_ref.name)
         uploaded.append(file_ref)
     return uploaded
+
+# 호출부
+uploaded_files = get_uploaded_files(api_key)
 
 # 2. 세션 상태(Chat & Messages) 초기화
 if "chat" not in st.session_state:

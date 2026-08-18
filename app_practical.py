@@ -37,9 +37,9 @@ SYSTEM_INSTRUCTION = """
 6. 친근하고 명확하게 반말로 응대할 것.
 """
 
-# 1. 실기 PDF 캐싱 업로드 함수 (최초 1회만 실행)
+# 1. 실기 PDF 캐싱 업로드 함수 (API 키가 바뀌면 캐시 자동 무효화)
 @st.cache_resource(show_spinner=False)
-def get_uploaded_practical_files():
+def get_uploaded_practical_files(api_key: str):
     client = genai.Client(api_key=api_key)
     PDF_DIR = "./pdf_practical"
     pdf_files = sorted(glob.glob(os.path.join(PDF_DIR, "*.pdf")))
@@ -67,7 +67,7 @@ def get_uploaded_practical_files():
 # 2. 세션 상태(Chat & Messages) 초기화
 if "practical_chat" not in st.session_state:
     with st.spinner("실기 기출문제 PDF 분석 및 과외 준비 중 (최초 1회만 진행)..."):
-        uploaded_files = get_uploaded_practical_files()
+        uploaded_files = get_uploaded_practical_files(api_key)
         
         if not uploaded_files:
             st.error("경고: 'pdf_practical' 폴더에 실기 PDF 파일이 없습니다! 파일을 넣어주세요.")

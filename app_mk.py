@@ -53,9 +53,9 @@ SYSTEM_INSTRUCTION = """
 6. 정답 시 핵심 맥락 1~2줄 정리, 오답/힌트 요청 시 일상 비유로 설명할 것.
 7. 친근하고 명확하게 반말로 응대할 것.
 """
-# 1. 매경 PDF 캐싱 업로드 함수 (600,000ms = 10분 설정 및 BytesIO 안정 전송)
+# 1. 매경 PDF 캐싱 업로드 함수 (API 키가 바뀌면 캐시 자동 무효화)
 @st.cache_resource(show_spinner=False)
-def get_uploaded_maekyung_files():
+def get_uploaded_maekyung_files(api_key: str):
     client = genai.Client(
         api_key=api_key,
         http_options=types.HttpOptions(timeout=600000)
@@ -107,7 +107,7 @@ def get_uploaded_maekyung_files():
 # 2. 세션 상태 초기화
 if "mk_chat" not in st.session_state:
     with st.spinner("매경TEST PDF 교재 및 기출자료 분석 중 (최초 1회만 진행)..."):
-        uploaded_files = get_uploaded_maekyung_files()
+        uploaded_files = get_uploaded_maekyung_files(api_key)
         
         if not uploaded_files:
             st.error("경고: 'pdf_maekyung' 폴더에 PDF 파일이 없습니다! 파일을 넣어주세요.")
