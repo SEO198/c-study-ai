@@ -87,13 +87,15 @@ if "chat" not in st.session_state:
             )
         )
         
-        # 최초 1회: 업로드된 파일 객체 참조와 첫 문제 요청
+# 최초 1회: 업로드된 파일 객체 참조와 첫 문제 요청
         init_res = chat.send_message(
             [*uploaded_files, "업로드된 자료들 중 완전 무작위(랜덤)로 하나 골라서 첫 번째 문제를 출제해줘!"]
         )
         
         st.session_state.chat = chat
-        st.sessi
+        st.session_state.messages = [
+            {"role": "assistant", "content": init_res.text}
+        ]
 
 # 3. 대화 히스토리 화면 출력
 for msg in st.session_state.messages:
