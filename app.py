@@ -16,7 +16,7 @@ except Exception:
     api_key = os.getenv("GEMINI_API_KEY")
 
 st.set_page_config(page_title="정보처리기사 문제은행", page_icon="🎓", layout="centered")
-st.title("🎓 1:1 전산/자격증 튜터 AI")
+st.title("🎓 1:1 정보처리기사 필기 튜터 AI")
 st.caption("PDF 기출문제를 기반으로 1:1 맞춤 과외를 진행합니다.")
 
 SYSTEM_INSTRUCTION = """

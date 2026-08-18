@@ -16,7 +16,7 @@ except Exception:
     api_key = os.getenv("GEMINI_API_KEY")
 
 st.set_page_config(page_title="정보처리 실기 과외 AI", page_icon="💻", layout="centered")
-st.title("💻 1:1 정보처리 실기 집중 튜터 AI")
+st.title("💻 1:1 정보처리기사 실기 집중 튜터 AI")
 st.caption("실기 기출문제를 바탕으로 주관식 단답형 및 코드 실행 결과 추적 과외를 진행합니다.")
 
 SYSTEM_INSTRUCTION = """
