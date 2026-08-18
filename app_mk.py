@@ -58,7 +58,7 @@ SYSTEM_INSTRUCTION = """
 def get_uploaded_maekyung_files(api_key: str):
     client = genai.Client(
         api_key=api_key,
-        http_options=types.HttpOptions(timeout=600000)
+        http_options=types.HttpOptions(timeout=1200000)
     )
     PDF_DIR = "./pdf_maekyung"
     pdf_files = sorted(glob.glob(os.path.join(PDF_DIR, "*.pdf")))
