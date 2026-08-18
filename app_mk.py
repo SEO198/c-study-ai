@@ -19,6 +19,14 @@ st.set_page_config(page_title="매경TEST 1:1 튜터 AI", page_icon="📈", layo
 st.title("📈 1:1 매경TEST 고득점 튜터 AI")
 st.caption("매경TEST 교재 요약 및 기출/모의고사를 기반으로 경제·경영 1:1 맞춤 과외를 진행합니다.")
 
+# 사이드바에 추가해서 언제든 세션을 초기화할 수 있게 만들기
+with st.sidebar:
+    st.header("⚙️ 학습 관리")
+    if st.button("🔄 새로운 문제로 새로고침"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
+
 PROMPT_RULE = """
 [매우 중요한 출제 규칙]
 1. 정답을 맞히거나, 사용자가 다음 문제를 요청할 때마다 반드시 다른 새로운 문제를 출제해.
