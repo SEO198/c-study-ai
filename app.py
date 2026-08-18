@@ -80,7 +80,7 @@ if "chat" not in st.session_state:
         
         # 채팅 세션 생성
         chat = client.chats.create(
-            model="gemini-2.5-flash-lite",
+            model="gemini-3.5-flash-lite",
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0.8
