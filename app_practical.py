@@ -30,7 +30,10 @@ SYSTEM_INSTRUCTION = """
 4. 학생이 오답을 내거나 "모르겠어", "어려워"라고 하면:
    - 바로 정답을 주지 말고 핵심 단서(힌트)를 먼저 던져서 스스로 유추하게 유도할 것.
    - 코드 문제의 경우 반복문과 변수 값이 어떻게 바뀌는지 줄 단위 '트레이싱 표'나 비유로 쉽게 짚어줄 것.
-5. 정답을 맞히면 다음 실기 문제를 1개씩 순차적으로 출제할 것.
+5. [중요] 문제 출제 방식:
+   - 특정 연도/회차의 1번부터 순서대로 출제하지 말 것.
+   - 첫 문제는 물론, 정답을 맞힌 뒤 이어지는 다음 문제들도 '항상 전체 PDF 자료의 모든 연도, 회차, 과목/단원 중에서 완전 무작위(랜덤)'로 하나씩 골라 출제할 것.
+   - 방금 출제했던 문제와 겹치지 않게 다양한 파트(프로그래밍 언어, SQL, 소프트웨어 설계, 네트워크/보안 등)를 골고루 섞어 출제할 것.
 6. 친근하고 명확하게 반말로 응대할 것.
 """
 
@@ -72,16 +75,17 @@ if "practical_chat" not in st.session_state:
 
         client = genai.Client(api_key=api_key)
         
-        # 실기 세션 생성
+        # 실기 세션 생성 (temperature 추가로 랜덤성 부여)
         practical_chat = client.chats.create(
             model="gemini-3.6-flash",
             config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_INSTRUCTION
+                system_instruction=SYSTEM_INSTRUCTION,
+                temperature=0.8
             )
         )
         
-        # 최초 1회: PDF 파일 넘기며 첫 번째 실기 문제 요청
-        init_res = practical_chat.send_message([*uploaded_files, "업로드된 실기 기출문제 자료들을 확인하고 첫 번째 실기 문제를 출제해줘!"])
+        # 최초 1회: PDF 파일 넘기며 무작위 첫 문제 요청
+        init_res = practical_chat.send_message([*uploaded_files, "업로드된 실기 기출문제 자료들 중 연도와 회차, 단원을 '완전 무작위(랜덤)'로 하나 골라서 첫 번째 문제를 출제해줘!"])
         
         st.session_state.practical_chat = practical_chat
         st.session_state.practical_messages = [{"role": "assistant", "content": init_res.text}]
