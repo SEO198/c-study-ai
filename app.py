@@ -40,61 +40,60 @@ SYSTEM_INSTRUCTION = """
 7. 실제 기출문제 형태를 충실히 반영해서 출제할 것.
 """
 
-# 1. PDF 캐싱 업로드 함수 (API 키가 바뀌면 자동 재실행됨)
+# 1. PDF 캐싱 업로드 함수 (최초 1회만 구글 서버로 업로드 후 캐시)
 @st.cache_resource(show_spinner=False)
 def get_uploaded_files(_api_key: str):
     client = genai.Client(api_key=_api_key)
-    PDF_DIR = "./pdf_data"
+    PDF_DIR = "./pdf_data"  # 또는 ./pdf_mk
     pdf_files = sorted(glob.glob(os.path.join(PDF_DIR, "*.pdf")))
     
     if not pdf_files:
         return []
 
     uploaded = []
-    for idx, file_path in enumerate(pdf_files):
-        with open(file_path, "rb") as f:
-            file_bytes = io.BytesIO(f.read())
-            file_ref = client.files.upload(
-                file=file_bytes,
-                config=types.UploadFileConfig(
-                    display_name=f"exam_doc_{idx+1}.pdf",
-                    mime_type="application/pdf"
-                )
+    for file_path in pdf_files:
+        # 파일 경로를 직접 전달하여 업로드 (가장 안정적)
+        file_ref = client.files.upload(
+            file=file_path,
+            config=types.UploadFileConfig(
+                mime_type="application/pdf"
             )
+        )
+        # 구글 서버 처리 대기
         while file_ref.state.name == "PROCESSING":
             time.sleep(1)
             file_ref = client.files.get(name=file_ref.name)
+            
         uploaded.append(file_ref)
     return uploaded
-
-# 호출부
-uploaded_files = get_uploaded_files(api_key)
 
 # 2. 세션 상태(Chat & Messages) 초기화
 if "chat" not in st.session_state:
     with st.spinner("기출문제 PDF 분석 및 과외 준비 중 (최초 1회만 진행)..."):
-        uploaded_files = get_uploaded_files()
+        uploaded_files = get_uploaded_files(api_key)
         
         if not uploaded_files:
-            st.error("경고: 'pdf_data' 폴더에 PDF 파일이 없습니다! 파일을 확인해주세요.")
+            st.error("경고: PDF 폴더에 파일이 없습니다! 경로와 파일을 확인해주세요.")
             st.stop()
 
         client = genai.Client(api_key=api_key)
         
-        # PDF와 시스템 프롬프트가 영구 유지되는 채팅 세션 생성 (temperature 0.8 추가)
+        # 채팅 세션 생성
         chat = client.chats.create(
-            model="gemini-3.5-flash-lite",
+            model="gemini-2.5-flash-lite",
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0.8
             )
         )
         
-        # 최초 1회: PDF 파일 넘기며 완전 무작위 첫 문제 요청
-        init_res = chat.send_message([*uploaded_files, "업로드된 기출문제 자료들 중 연도와 회차, 과목을 '완전 무작위(랜덤)'로 하나 골라서 첫 번째 문제를 출제해줘!"])
+        # 최초 1회: 업로드된 파일 객체 참조와 첫 문제 요청
+        init_res = chat.send_message(
+            [*uploaded_files, "업로드된 자료들 중 완전 무작위(랜덤)로 하나 골라서 첫 번째 문제를 출제해줘!"]
+        )
         
         st.session_state.chat = chat
-        st.session_state.messages = [{"role": "assistant", "content": init_res.text}]
+        st.sessi
 
 # 3. 대화 히스토리 화면 출력
 for msg in st.session_state.messages:
