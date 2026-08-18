@@ -80,7 +80,7 @@ if "chat" not in st.session_state:
         
         # PDF와 시스템 프롬프트가 영구 유지되는 채팅 세션 생성 (temperature 0.8 추가)
         chat = client.chats.create(
-            model="gemini-3.6-flash",
+            model="gemini-3.5-flash-lite",
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0.8

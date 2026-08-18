@@ -77,7 +77,7 @@ if "practical_chat" not in st.session_state:
         
         # 실기 세션 생성 (temperature 추가로 랜덤성 부여)
         practical_chat = client.chats.create(
-            model="gemini-3.6-flash",
+            model="gemini-3.5-flash-lite",
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0.8
