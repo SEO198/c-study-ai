@@ -70,8 +70,12 @@ if "chat" not in st.session_state:
 1. 문제를 깔끔하게 보여주고
 2. "정답이 뭔 것 같아? 모르면 '모르겠다'고 해줘!" 하고 물어봐 줘.
 """
+try:
     res = st.session_state.chat.send_message(init_prompt)
     st.session_state.messages.append({"role": "assistant", "content": res.text})
+except Exception as e:
+    err_msg = "🚨 **무료 요청 한도(429) 초과!** 앱을 켤 때 요청이 몰렸어. 잠시 후 새로고침 해줘, 회장님!"
+    st.session_state.messages.append({"role": "assistant", "content": err_msg})
 
 # 화면에 대화 내역 출력
 for msg in st.session_state.messages:
@@ -110,12 +114,24 @@ if user_input := st.chat_input("정답을 말하거나, '초딩처럼 설명해�
 
     with st.chat_message("assistant"):
         with st.spinner("과외 쌤이 생각 중..."):
-            response = st.session_state.chat.send_message(user_input)
-            st.markdown(response.text)
-            st.session_state.messages.append({"role": "assistant", "content": response.text})
-            
-            # 만약 유저가 모른다고 하거나 다시 보기를 원하면 자동으로 사이드바 복습 노트에 추가하는 힌트 텍스트 감지
-            if any(keyword in user_input for keyword in ["모르겠", "이해 안", "어려워", "체크", "다시"]):
-                current_q = st.session_state.question_pool[st.session_state.currentIndex]
-                if current_q not in st.session_state.review_list:
-                    st.session_state.review_list.append(current_q)
+            try:
+                # ⬇️ 이 부분을 try로 감싸기
+                response = st.session_state.chat.send_message(user_input)
+                st.markdown(response.text)
+                st.session_state.messages.append({"role": "assistant", "content": response.text})
+                
+                # 키워드 체크 로직
+                if any(keyword in user_input for keyword in ["모르겠", "이해 안", "어려워", "체크", "다시"]):
+                    current_q = st.session_state.question_pool[st.session_state.currentIndex]
+                    if current_q not in st.session_state.review_list:
+                        st.session_state.review_list.append(current_q)
+
+            except Exception as e:
+                # ⬇️ 에러 발생 시(429 등) 예쁘게 메시지 출력
+                if "429" in str(e) or "ResourceExhausted" in str(e):
+                    err_msg = "🚨 **무료 요청 한도(429) 초과!** 토큰을 잠시 다 썼거나 너무 빨리 물어봤어. 약 30초 뒤에 다시 입력해 줘, 회장님!"
+                else:
+                    err_msg = f"⚠️ 에러가 발생했어: {e}"
+                
+                st.error(err_msg)
+                st.session_state.messages.append({"role": "assistant", "content": err_msg})
