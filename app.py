@@ -49,7 +49,7 @@ if "chat" not in st.session_state:
 
         # [핵심] 안정적인 1.5 플래시 모델 및 채팅 세션 생성
         model = genai.GenerativeModel(
-            model_name="models/gemini-2.5-flash",
+            model_name="models/gemini-3.5-flash",
             system_instruction=system_instruction
         )
         chat = model.start_chat(history=[])
