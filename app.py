@@ -1,7 +1,4 @@
 import os
-import glob
-import time
-import io
 import streamlit as st
 from dotenv import load_dotenv
 from google import genai
@@ -17,11 +14,13 @@ except Exception:
 
 st.set_page_config(page_title="정보처리기사 문제은행", page_icon="🎓", layout="centered")
 st.title("🎓 1:1 정보처리기사 필기 튜터 AI")
-st.caption("PDF 기출문제를 기반으로 1:1 맞춤 과외를 진행합니다.")
+st.caption("정제된 기출문제 텍스트를 기반으로 1:1 맞춤 과외를 진행합니다.")
 
-SYSTEM_INSTRUCTION = """
+# 시스템 프롬프트에 기출문제 컨텍스트를 동적으로 주입하기 위해 함수로 분리
+def get_system_instruction(question_text):
+    return f"""
 너는 정보처리기사 '필기 시험' 1:1 전담 과외 선생님이야.
-업로드된 필기 기출문제 PDF 자료들의 실제 문제들을 기반으로 학생에게 1문제씩 출제하고 철저하게 이해할 때까지 지도해.
+아래에 제공된 [기출문제 데이터] 내용들을 기반으로 학생에게 1문제씩 출제하고 철저하게 이해할 때까지 지도해.
 
 [다루는 영역]
 - 프로그래밍 언어: C언어(포인터, 배열, 연산자 등), Java(상속, 객체지향 등), Python(기본 문법/슬라이싱)
@@ -34,62 +33,54 @@ SYSTEM_INSTRUCTION = """
 4. 틀리거나 힌트를 요청하면 초등학생도 이해할 수 있는 일상 속 비유로 쉽게 설명할 것.
 5. [중요] 문제 출제 방식:
    - 특정 연도/회차의 1번부터 순서대로 출제하지 말 것.
-   - 첫 문제는 물론, 정답을 맞힌 뒤 이어지는 다음 문제들도 '항상 전체 PDF 자료의 모든 연도, 회차, 과목 중에서 완전 무작위(랜덤)'로 하나씩 골라 출제할 것.
-   - 방금 출제했던 문제와 겹치지 않게 5개 과목을 골고루 섞어서 출제할 것.
+   - 첫 문제는 물론, 정답을 맞힌 뒤 이어지는 다음 문제들도 '항상 아래 기출 데이터의 모든 연도, 회차 중에서 완전 무작위(랜덤)'로 하나씩 골라 출제할 것.
+   - 방금 출제했던 문제와 겹치지 않게 과목을 골고루 섞어서 출제할 것.
 6. 친근하고 명확하게 반말로 응대할 것.
 7. 실제 기출문제 형태를 충실히 반영해서 출제할 것.
+
+[기출문제 데이터]
+{question_text[:30000]}  # 너무 길면 토큰 초과할 수 있으니 앞부분 주요 내용 컨텍스트로 제공
 """
 
-# 1. PDF 캐싱 업로드 함수 (최초 1회만 구글 서버로 업로드 후 캐시)
-@st.cache_resource(show_spinner=False)
-def get_uploaded_files(_api_key: str):
-    client = genai.Client(api_key=_api_key)
-    PDF_DIR = "./pdf_data"  # 또는 ./pdf_mk
-    pdf_files = sorted(glob.glob(os.path.join(PDF_DIR, "*.pdf")))
-    
-    if not pdf_files:
-        return []
+# 1. 텍스트 파일 로드 함수 (캐싱 적용)
+@st.cache_data
+def load_question_bank():
+    txt_path = "all_questions.txt"
+    if not os.path.exists(txt_path):
+        return None
+    with open(txt_path, "r", encoding="utf-8") as f:
+        return f.read()
 
-    uploaded = []
-    for file_path in pdf_files:
-        # 파일 경로를 직접 전달하여 업로드 (가장 안정적)
-        file_ref = client.files.upload(
-            file=file_path,
-            config=types.UploadFileConfig(
-                mime_type="application/pdf"
-            )
-        )
-        # 구글 서버 처리 대기
-        while file_ref.state.name == "PROCESSING":
-            time.sleep(1)
-            file_ref = client.files.get(name=file_ref.name)
-            
-        uploaded.append(file_ref)
-    return uploaded
-
-# 2. 세션 상태(Chat & Messages) 초기화
+# 2. 세션 상태 초기화 및 튜터 세팅
 if "chat" not in st.session_state:
-    with st.spinner("기출문제 PDF 분석 및 과외 준비 중 (최초 1회만 진행)..."):
-        uploaded_files = get_uploaded_files(api_key)
+    with st.spinner("기출문제 텍스트 데이터 로딩 및 과외 준비 중..."):
+        question_bank_text = load_question_bank()
         
-        if not uploaded_files:
-            st.error("경고: PDF 폴더에 파일이 없습니다! 경로와 파일을 확인해주세요.")
+        if not question_bank_text:
+            st.error("경고: 'all_questions.txt' 파일이 없습니다! 먼저 pdf_to_text.py를 실행해서 텍스트 파일을 생성해주세요.")
+            st.stop()
+
+        if not api_key:
+            st.error("경고: GEMINI_API_KEY가 설정되지 않았습니다. 시크릿츠나 .env를 확인해주세요.")
             st.stop()
 
         client = genai.Client(api_key=api_key)
         
-        # 채팅 세션 생성
+        # 시스템 프롬프트에 기출 텍스트 심어주기
+        system_instruction = get_system_instruction(question_bank_text)
+        
+        # 채팅 세션 생성 (안정적인 최신 플래시 모델 사용)
         chat = client.chats.create(
-            model="gemini-3.5-flash-lite",
+            model="gemini-3.5-flash-light",
             config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_INSTRUCTION,
+                system_instruction=system_instruction,
                 temperature=0.8
             )
         )
         
-# 최초 1회: 업로드된 파일 객체 참조와 첫 문제 요청
+        # 첫 문제 요청
         init_res = chat.send_message(
-            [*uploaded_files, "업로드된 자료들 중 완전 무작위(랜덤)로 하나 골라서 첫 번째 문제를 출제해줘!"]
+            "업로드된 기출 텍스트 자료들 중 완전 무작위(랜덤)로 하나 골라서 첫 번째 문제를 출제해줘!"
         )
         
         st.session_state.chat = chat
@@ -108,7 +99,6 @@ if user_input := st.chat_input("정답을 입력하거나 질문해보세요 (�
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # 튜터 답변 생성 (기존 chat 세션이 PDF 맥락을 그대로 유지)
     with st.chat_message("assistant"):
         with st.spinner("생각 중..."):
             response = st.session_state.chat.send_message(user_input)
